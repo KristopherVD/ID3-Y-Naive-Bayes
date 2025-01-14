@@ -1,9 +1,21 @@
 import pandas as pd
+import os
 from sklearn.tree import DecisionTreeClassifier, export_text
 from sklearn.model_selection import train_test_split
 
-# Cargar el dataset desde la ruta proporcionada
-ruta_archivo = "C:/Users/kvela/Documents/Ux/3er semestre/Estructuras de datos/Tercer parcial/Examen/Muertes totales de trabajadores y no trabajadores por Covid_19 en 2020.xlsx"
+# Obtener la ruta del directorio actual
+directorio_actual = os.path.dirname(os.path.abspath(__file__))
+
+# Construir la ruta del archivo basado en el directorio actual
+nombre_archivo = "Muertes totales de trabajadores y no trabajadores por Covid_19 en 2020.xlsx"
+ruta_archivo = os.path.join(directorio_actual, nombre_archivo)
+
+# Verificar si el archivo existe
+if not os.path.exists(ruta_archivo):
+    print(f"Error: No se encontró el archivo '{nombre_archivo}' en la carpeta actual.")
+    exit()
+
+# Cargar el archivo de Excel
 datos = pd.read_excel(ruta_archivo)
 
 # Filtrar datos relevantes (sexo, ocupación, causa de defunción)
