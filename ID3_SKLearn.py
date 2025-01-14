@@ -1,53 +1,47 @@
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
+from sklearn.tree import DecisionTreeClassifier, export_text
 from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier, plot_tree
-from sklearn.metrics import confusion_matrix
 
-# 1. Función para cargar los datos
-def load_data(file_path):
-    excel_data = pd.ExcelFile(file_path)
-    sheets_data = {sheet: excel_data.parse(sheet) for sheet in excel_data.sheet_names}
-    return sheets_data
+# Cargar el dataset desde la ruta proporcionada
+ruta_archivo = "C:/Users/kvela/Documents/Ux/3er semestre/Estructuras de datos/Tercer parcial/Examen/Muertes totales de trabajadores y no trabajadores por Covid_19 en 2020.xlsx"
+datos = pd.read_excel(ruta_archivo)
 
-# 2. Función para preprocesar los datos
-def preprocess_data(data):
-    data = data[['sexo', 'ocupacion', 'causa_def']].dropna()
-    data['trabajador'] = data['ocupacion'].apply(lambda x: 1 if x == 4 else 0)
-    features = pd.get_dummies(data[['sexo', 'causa_def']], drop_first=True)
-    labels = data['trabajador']
-    return features, labels
+# Filtrar datos relevantes (sexo, ocupación, causa de defunción)
+datos = datos[["sexo", "ocupacion", "causa_def"]]
 
-# 3. Cargar y procesar los datos
-file_path = "C:/Users/kvela/Desktop/Muertes totales de trabajadores y no trabajadores por Covid_19 en 2020.xlsx"
-sheets_data = load_data(file_path)
-data = sheets_data['Muertes_Totales']
+# Filtrar únicamente los casos válidos para "ocupación" y "causa de defunción"
+datos = datos[(datos["ocupacion"].isin([4, 11])) & (datos["causa_def"].isin(["U071", "U072"]))]
 
-features, labels = preprocess_data(data)
+# Codificar las columnas categóricas
+mapa_sexo = {1: "hombre", 2: "mujer", 9: "no_especificado"}
+mapa_ocupacion = {4: "trabajador", 11: "no_trabajador"}
+mapa_causa = {"U071": "covid_diagnosticado", "U072": "covid_postmortem"}
 
-# 4. Dividir los datos en entrenamiento y prueba
-x_train, x_test, y_train, y_test = train_test_split(features, labels, test_size=0.3, random_state=42)
+datos["sexo"] = datos["sexo"].map(mapa_sexo)
+datos["ocupacion"] = datos["ocupacion"].map(mapa_ocupacion)
+datos["causa_def"] = datos["causa_def"].map(mapa_causa)
 
-# 5. Modelo de Árbol de Decisión (ID3)
-id3_model = DecisionTreeClassifier(criterion='entropy', random_state=42)
-id3_model.fit(x_train, y_train)
+# Dividir los datos en conjuntos de entrenamiento y prueba (80%-20%)
+X = datos[["sexo", "causa_def"]]  # Características
+y = datos["ocupacion"]  # Etiquetas
 
-# Predicciones del Árbol de Decisión
-id3_predictions = id3_model.predict(x_test)
+# Codificar las variables categóricas de las características
+X = X.apply(lambda col: col.astype('category').cat.codes)
 
-# Mostrar la matriz de confusión
-print("Resultados del Árbol de Decisión (ID3):")
-print(confusion_matrix(y_test, id3_predictions))
+# Dividir el dataset en conjunto de entrenamiento y prueba
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Graficar el Árbol de Decisión
-plt.figure(figsize=(20, 10))
-plot_tree(
-    id3_model, 
-    feature_names=features.columns, 
-    class_names=["No Trabajador", "Trabajador"], 
-    filled=True, 
-    rounded=True
-)
-plt.title("Árbol de Decisión (ID3)")
-plt.show()
+# Crear el modelo de árbol de decisión (ID3 en sklearn, al usar la entropía como criterio)
+modelo = DecisionTreeClassifier(criterion="entropy", random_state=42)
+
+# Entrenar el modelo
+modelo.fit(X_train, y_train)
+
+# Evaluar el modelo en el conjunto de prueba
+precision = modelo.score(X_test, y_test)
+print(f"Precisión del árbol de decisión ID3 con sklearn: {precision:.2%}")
+
+# Generar y mostrar el árbol de decisión como texto
+arbol_texto = export_text(modelo, feature_names=["sexo", "causa_def"])
+print("\nÁrbol de decisión ID3 (con sklearn):")
+print(arbol_texto)
