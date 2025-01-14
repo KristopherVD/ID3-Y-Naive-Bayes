@@ -1,9 +1,21 @@
 import pandas as pd
 import numpy as np
+import os
 from math import log2
 
-# Cargar el dataset desde la ruta proporcionada
-ruta_archivo = "C:/Users/kvela/Documents/Ux/3er semestre/Estructuras de datos/Tercer parcial/Examen/Muertes totales de trabajadores y no trabajadores por Covid_19 en 2020.xlsx"
+# Obtener la ruta del directorio actual
+directorio_actual = os.path.dirname(os.path.abspath(__file__))
+
+# Construir la ruta del archivo basado en el directorio actual
+nombre_archivo = "Muertes totales de trabajadores y no trabajadores por Covid_19 en 2020.xlsx"
+ruta_archivo = os.path.join(directorio_actual, nombre_archivo)
+
+# Verificar si el archivo existe
+if not os.path.exists(ruta_archivo):
+    print(f"Error: No se encontró el archivo '{nombre_archivo}' en la carpeta actual.")
+    exit()
+
+# Cargar el archivo de Excel
 datos = pd.read_excel(ruta_archivo)
 
 # Filtrar datos relevantes (sexo, ocupación, causa de defunción)
@@ -20,6 +32,27 @@ mapa_causa = {"U071": "covid_diagnosticado", "U072": "covid_postmortem"}
 datos["sexo"] = datos["sexo"].map(mapa_sexo)
 datos["ocupacion"] = datos["ocupacion"].map(mapa_ocupacion)
 datos["causa_def"] = datos["causa_def"].map(mapa_causa)
+
+# Dividir los datos en conjunto de entrenamiento (80%) y conjunto de prueba (20%) de manera manual
+# Mezclar aleatoriamente los datos
+datos_aleatorios = datos.sample(frac=1, random_state=42).reset_index(drop=True)
+
+# Determinar el índice de la división
+tamanio_entrenamiento = int(0.8 * len(datos_aleatorios))
+
+# Crear los conjuntos de entrenamiento y prueba
+datos_entrenamiento = datos_aleatorios[:tamanio_entrenamiento]
+datos_prueba = datos_aleatorios[tamanio_entrenamiento:]
+
+# Separar las características (X) y las etiquetas (y) en ambos conjuntos
+X_entrenamiento = datos_entrenamiento[["sexo", "causa_def"]]
+y_entrenamiento = datos_entrenamiento["ocupacion"]
+X_prueba = datos_prueba[["sexo", "causa_def"]]
+y_prueba = datos_prueba["ocupacion"]
+
+# Codificar las variables categóricas de las características
+X_entrenamiento = X_entrenamiento.apply(lambda col: col.astype('category').cat.codes)
+X_prueba = X_prueba.apply(lambda col: col.astype('category').cat.codes)
 
 # Función para calcular la entropía
 def calcular_entropia(columna):
@@ -73,8 +106,8 @@ def construir_arbol(datos, atributos, clase):
 atributos = ["sexo", "causa_def"]
 clase = "ocupacion"
 
-# Construir el árbol
-arbol_decision = construir_arbol(datos, atributos, clase)
+# Construir el árbol con el conjunto de entrenamiento
+arbol_decision = construir_arbol(pd.concat([X_entrenamiento, y_entrenamiento], axis=1), atributos, clase)
 
 # Mostrar el árbol
 print("\nÁrbol de decisión ID3 (manual):")
@@ -88,12 +121,12 @@ def predecir_con_arbol(arbol, registro):
         return predecir_con_arbol(arbol[atributo].get(valor, 'Desconocido'), registro)
     return arbol
 
-# Evaluar el modelo
+# Evaluar el modelo en el conjunto de prueba
 predicciones = []
-for _, fila in datos.iterrows():
+for _, fila in X_prueba.iterrows():
     predicciones.append(predecir_con_arbol(arbol_decision, fila))
 
 # Calcular precisión manualmente
-predicciones = pd.Series(predicciones, index=datos.index)
-precision_manual = (predicciones == datos["ocupacion"]).mean()
-print(f"\nPrecisión del árbol de decisión manual: {precision_manual:.2%}")
+predicciones = pd.Series(predicciones, index=X_prueba.index)
+precision_manual = (predicciones == y_prueba).mean()
+print(f"\nPrecisión del árbol de decisión: {precision_manual:.2%}")
