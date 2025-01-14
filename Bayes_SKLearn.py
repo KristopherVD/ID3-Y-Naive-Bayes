@@ -1,58 +1,55 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.naive_bayes import GaussianNB
-from sklearn.metrics import confusion_matrix
+from sklearn.preprocessing import LabelEncoder
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score, confusion_matrix
 
-# 1. Función para cargar los datos
-def load_data(file_path):
-    excel_data = pd.ExcelFile(file_path)
-    sheets_data = {sheet: excel_data.parse(sheet) for sheet in excel_data.sheet_names}
-    return sheets_data
+# Leer el archivo Excel
+datos = pd.read_excel("C:/Users/kvela/Documents/Ux/3er semestre/Estructuras de datos/Tercer parcial/Examen/Muertes totales de trabajadores y no trabajadores por Covid_19 en 2020.xlsx")
 
-# 2. Función para preprocesar los datos
-def preprocess_data(data):
-    data = data[['sexo', 'ocupacion', 'causa_def']].dropna()
-    data['trabajador'] = data['ocupacion'].apply(lambda x: 1 if x == 4 else 0)
-    features = pd.get_dummies(data[['sexo', 'causa_def']], drop_first=True)
-    labels = data['trabajador']
-    return features, labels
+# Codificar variables categóricas con LabelEncoder
+le_sexo = LabelEncoder()
+le_causa = LabelEncoder()
+le_ocupacion = LabelEncoder()
 
-# 3. Cargar y procesar los datos
-file_path = "C:/Users/kvela/Desktop/Muertes totales de trabajadores y no trabajadores por Covid_19 en 2020.xlsx"
-sheets_data = load_data(file_path)
-data = sheets_data['Muertes_Totales']
+datos["sexo_cod"] = le_sexo.fit_transform(datos["sexo"])
+datos["causa_cod"] = le_causa.fit_transform(datos["causa_def"])
+datos["ocupacion_cod"] = le_ocupacion.fit_transform(datos["ocupacion"])
 
-features, labels = preprocess_data(data)
+# Separar características (X) y etiqueta (y)
+X = datos[["sexo_cod", "causa_cod"]]
+y = datos["ocupacion_cod"]
 
-# 4. Dividir los datos en entrenamiento y prueba
-x_train, x_test, y_train, y_test = train_test_split(features, labels, test_size=0.3, random_state=42)
+# Dividir los datos en conjuntos de entrenamiento y prueba (80%-20%)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# 5. Modelo de Naive Bayes
-nb_model = GaussianNB()
-nb_model.fit(x_train, y_train)
+# Crear el modelo de Naive Bayes
+modelo = MultinomialNB()
 
-# Predicciones de Naive Bayes
-nb_predictions = nb_model.predict(x_test)
+# Entrenar el modelo
+modelo.fit(X_train, y_train)
 
-# Mostrar la matriz de confusión
-print("Resultados de Naive Bayes:")
-print(confusion_matrix(y_test, nb_predictions))
+# Predecir en el conjunto de prueba
+y_pred = modelo.predict(X_test)
 
-# Generar la tabla de probabilidades para Naive Bayes
-nb_probabilities = nb_model.predict_proba(x_test)
+# Calcular precisión
+precision = accuracy_score(y_test, y_pred)
 
-# Crear un DataFrame con las probabilidades
-nb_table = pd.DataFrame(
-    nb_probabilities, 
-    columns=["Probabilidad No Trabajador", "Probabilidad Trabajador"]
-)
-nb_table["Predicción"] = nb_model.predict(x_test)
-nb_table["Real"] = y_test.reset_index(drop=True)
+print(f"\nPrecisión del modelo (scikit-learn): {precision:.2%}")
 
-# Mostrar las primeras filas de la tabla
-print("Tabla de Probabilidades (Naive Bayes):")
-print(nb_table.head(10))
+# Matriz de confusión
+matriz_confusion = confusion_matrix(y_test, y_pred)
+print("\nMatriz de confusión:")
+print(matriz_confusion)
 
-# Guardar la tabla como archivo Excel
-nb_table.to_excel("tabla_probabilidades_naive_bayes.xlsx", index=False)
-print("Tabla guardada como 'tabla_probabilidades_naive_bayes.xlsx'")
+# Resultados detallados
+correctos_trabajador = matriz_confusion[0, 0]
+correctos_no_trabajador = matriz_confusion[1, 1]
+incorrectos_trabajador = matriz_confusion[0, 1]
+incorrectos_no_trabajador = matriz_confusion[1, 0]
+
+print("\nClasificación de casos:")
+print(f"- Correctos (trabajador): {correctos_trabajador}")
+print(f"- Correctos (no trabajador): {correctos_no_trabajador}")
+print(f"- Incorrectos (trabajador): {incorrectos_trabajador}")
+print(f"- Incorrectos (no trabajador): {incorrectos_no_trabajador}")
