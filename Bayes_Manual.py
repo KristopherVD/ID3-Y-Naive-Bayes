@@ -1,8 +1,20 @@
 import pandas as pd
 import numpy as np
+import os
 
-# Cargar el dataset desde la ruta proporcionada
-ruta_archivo = "C:/Users/kvela/Documents/Ux/3er semestre/Estructuras de datos/Tercer parcial/Examen/Muertes totales de trabajadores y no trabajadores por Covid_19 en 2020.xlsx"
+# Obtener la ruta del directorio actual
+directorio_actual = os.path.dirname(os.path.abspath(__file__))
+
+# Construir la ruta del archivo basado en el directorio actual
+nombre_archivo = "Muertes totales de trabajadores y no trabajadores por Covid_19 en 2020.xlsx"
+ruta_archivo = os.path.join(directorio_actual, nombre_archivo)
+
+# Verificar si el archivo existe
+if not os.path.exists(ruta_archivo):
+    print(f"Error: No se encontró el archivo '{nombre_archivo}' en la carpeta actual.")
+    exit()
+
+# Cargar el archivo de Excel
 datos = pd.read_excel(ruta_archivo)
 
 # Filtrar datos relevantes (sexo, ocupación, causa de defunción)
@@ -44,8 +56,8 @@ def predecir_clase(registro):
     prob_no_trabajador = p_no_trabajador
 
     for caracteristica, valor in registro.items():
-        prob_trabajador *= prob_condicionales["trabajador"].get(caracteristica, {}).get(valor, 1e-6)
-        prob_no_trabajador *= prob_condicionales["no_trabajador"].get(caracteristica, {}).get(valor, 1e-6)
+        prob_trabajador *= prob_condicionales["trabajador"].get(caracteristica, {}).get(valor, 0)
+        prob_no_trabajador *= prob_condicionales["no_trabajador"].get(caracteristica, {}).get(valor, 0)
 
     return "trabajador" if prob_trabajador > prob_no_trabajador else "no_trabajador"
 
@@ -58,7 +70,7 @@ for _, fila in datos_prueba.iterrows():
 predicciones = pd.Series(predicciones, index=datos_prueba.index)
 precision = (predicciones == datos_prueba["ocupacion"]).mean()
 
-print(f"\nPrecisión del modelo: {precision:.2%}")
+print(f"\nPrecisión del modelo manual: {precision:.2%}")
 
 # Inicializar contadores
 correctos_trabajador = 0
@@ -83,12 +95,7 @@ for _, fila in datos_prueba.iterrows():
         else:
             incorrectos_no_trabajador += 1
 
-# Calcular precisión
-total_correctos = correctos_trabajador + correctos_no_trabajador
-total_casos = len(datos_prueba)
-precision = total_correctos / total_casos * 100
-
-# Mostrar resultados
+# Mostrar resultados de clasificación
 print("\nClasificación de casos:")
 print(f"- Correctos (trabajador): {correctos_trabajador}")
 print(f"- Correctos (no trabajador): {correctos_no_trabajador}")
