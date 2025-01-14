@@ -1,11 +1,24 @@
 import pandas as pd
+import os
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score, confusion_matrix
 
-# Leer el archivo Excel
-datos = pd.read_excel("C:/Users/kvela/Documents/Ux/3er semestre/Estructuras de datos/Tercer parcial/Examen/Muertes totales de trabajadores y no trabajadores por Covid_19 en 2020.xlsx")
+# Obtener la ruta del directorio actual
+directorio_actual = os.path.dirname(os.path.abspath(__file__))
+
+# Construir la ruta del archivo basado en el directorio actual
+nombre_archivo = "Muertes totales de trabajadores y no trabajadores por Covid_19 en 2020.xlsx"
+ruta_archivo = os.path.join(directorio_actual, nombre_archivo)
+
+# Verificar si el archivo existe
+if not os.path.exists(ruta_archivo):
+    print(f"Error: No se encontró el archivo '{nombre_archivo}' en la carpeta actual.")
+    exit()
+
+# Cargar el archivo de Excel
+datos = pd.read_excel(ruta_archivo)
 
 # Codificar variables categóricas con LabelEncoder
 le_sexo = LabelEncoder()
